@@ -10,6 +10,7 @@ import {
   isSameDay,
   addMonths,
   subMonths,
+  addDays,
   getDay,
   setMonth,
   setYear,
@@ -27,7 +28,7 @@ interface CalendarViewProps {
   records: RaceRecord[];
 }
 
-const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"];
 
 export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -52,41 +53,52 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const startPadding = getDay(monthStart);
+
+  // Monday-first: Mon=0 … Sun=6
+  const startPadding = (getDay(monthStart) + 6) % 7;
+  const prevMonthEnd = endOfMonth(subMonths(currentMonth, 1));
+  const prevDays = Array.from({ length: startPadding }, (_, i) =>
+    addDays(prevMonthEnd, -(startPadding - 1 - i))
+  );
+  const totalCells = startPadding + days.length;
+  const trailingCount = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  const nextDays = Array.from({ length: trailingCount }, (_, i) =>
+    addDays(startOfMonth(addMonths(currentMonth, 1)), i)
+  );
+  const allDays = [...prevDays, ...days, ...nextDays];
 
   const getDaySummary = (date: Date) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    const dayRecords = getRecordsByDate(dateStr);
+    const dayRecords = getRecordsByDate(format(date, "yyyy-MM-dd"));
     if (dayRecords.length === 0) return null;
-    const profit = dayRecords.reduce((sum, r) => sum + r.profit, 0);
-    return { profit, count: dayRecords.length };
+    return { profit: dayRecords.reduce((sum, r) => sum + r.profit, 0) };
   };
 
   const monthSummary = (() => {
     const monthRecords = records.filter((r) =>
       r.date.startsWith(format(currentMonth, "yyyy-MM"))
     );
-    return {
-      investment: monthRecords.reduce((sum, r) => sum + r.investment, 0),
-      payout: monthRecords.reduce((sum, r) => sum + r.payout, 0),
-      profit: monthRecords.reduce((sum, r) => sum + r.profit, 0),
-    };
+    const investment = monthRecords.reduce((sum, r) => sum + r.investment, 0);
+    const payout = monthRecords.reduce((sum, r) => sum + r.payout, 0);
+    const profit = payout - investment;
+    const recoveryRate =
+      investment > 0 ? Math.round((payout / investment) * 100) : 0;
+    return { investment, payout, profit, recoveryRate };
   })();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Month navigation */}
-      <div className="relative flex items-center justify-between">
+      <div className="relative flex items-center justify-between px-2 py-2">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-5 w-5" />
         </Button>
         <button
           onClick={openPicker}
-          className="rounded-md px-3 py-1 text-lg font-semibold hover:bg-accent transition-colors"
+          className="rounded-lg px-4 py-1 text-2xl font-bold hover:bg-accent transition-colors"
         >
           {format(currentMonth, "yyyy年M月", { locale: ja })}
         </button>
@@ -95,42 +107,30 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
           size="icon"
           onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-5 w-5" />
         </Button>
 
         {/* Year/Month picker */}
         {showPicker && (
           <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setShowPicker(false)}
-            />
-            <div className="absolute left-1/2 top-full z-20 mt-1 w-64 -translate-x-1/2 rounded-xl border bg-card shadow-lg">
-              {/* Year selector */}
+            <div className="fixed inset-0 z-10" onClick={() => setShowPicker(false)} />
+            <div className="fixed left-1/2 top-24 z-20 w-64 -translate-x-1/2 rounded-xl border bg-card shadow-lg">
               <div className="flex items-center justify-between border-b px-4 py-2">
-                <button
-                  onClick={() => setPickerYear((y) => y - 1)}
-                  className="rounded p-1 hover:bg-accent"
-                >
+                <button onClick={() => setPickerYear((y) => y - 1)} className="rounded p-1 hover:bg-accent">
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <span className="font-semibold">{pickerYear}年</span>
-                <button
-                  onClick={() => setPickerYear((y) => y + 1)}
-                  className="rounded p-1 hover:bg-accent"
-                >
+                <button onClick={() => setPickerYear((y) => y + 1)} className="rounded p-1 hover:bg-accent">
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
-              {/* Month grid */}
               <div className="grid grid-cols-4 gap-1 p-3">
                 {Array.from({ length: 12 }, (_, i) => (
                   <button
                     key={i}
                     onClick={() => selectMonth(i)}
                     className={`rounded-lg py-2 text-sm font-medium transition-colors hover:bg-accent ${
-                      pickerYear === getYear(currentMonth) &&
-                      i === getMonth(currentMonth)
+                      pickerYear === getYear(currentMonth) && i === getMonth(currentMonth)
                         ? "bg-primary text-primary-foreground hover:bg-primary"
                         : ""
                     }`}
@@ -144,80 +144,98 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
         )}
       </div>
 
-      {/* Monthly summary */}
-      <div className="grid grid-cols-3 gap-2 rounded-lg bg-muted p-3 text-center text-sm">
-        <div>
-          <p className="text-muted-foreground">投資</p>
-          <p className="font-semibold">¥{monthSummary.investment.toLocaleString()}</p>
-        </div>
-        <div>
-          <p className="text-muted-foreground">払戻</p>
-          <p className="font-semibold">¥{monthSummary.payout.toLocaleString()}</p>
-        </div>
-        <div>
-          <p className="text-muted-foreground">収支</p>
-          <p
-            className={`font-semibold ${
-              monthSummary.profit >= 0 ? "text-green-600" : "text-red-500"
-            }`}
-          >
-            {monthSummary.profit >= 0 ? "+" : ""}¥{monthSummary.profit.toLocaleString()}
-          </p>
-        </div>
-      </div>
-
-      {/* Weekday headers */}
-      <div className="grid grid-cols-7 text-center text-xs font-medium text-muted-foreground">
-        {WEEKDAYS.map((d, i) => (
-          <div
-            key={d}
-            className={i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : ""}
-          >
-            {d}
+      {/* Summary card */}
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="flex items-stretch">
+          <div className="flex-1 px-4 py-3">
+            <p className="text-xs text-muted-foreground">収支</p>
+            <p className="text-2xl font-bold text-red-500">
+              {monthSummary.profit >= 0 ? "+" : ""}
+              {monthSummary.profit.toLocaleString()}円
+            </p>
           </div>
-        ))}
+          <div className="w-px bg-border" />
+          <div className="w-24 px-3 py-3 text-center">
+            <p className="text-xs text-muted-foreground">回収率</p>
+            <p className={`text-xl font-bold ${monthSummary.recoveryRate >= 100 ? "text-green-600" : "text-blue-500"}`}>
+              {monthSummary.recoveryRate}%
+            </p>
+          </div>
+          <div className="w-px bg-border" />
+          <div className="px-4 py-3 text-sm">
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">購入</span>
+              <span className="font-medium">{monthSummary.investment.toLocaleString()}円</span>
+            </div>
+            <div className="flex justify-between gap-3 mt-1">
+              <span className="text-muted-foreground">払戻</span>
+              <span className="font-medium">{monthSummary.payout.toLocaleString()}円</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {Array.from({ length: startPadding }).map((_, i) => (
-          <div key={`pad-${i}`} />
-        ))}
-        {days.map((day) => {
-          const summary = getDaySummary(day);
-          const dayOfWeek = getDay(day);
-          return (
-            <button
-              key={day.toISOString()}
-              onClick={() => onSelectDate(day)}
-              className={`flex min-h-[56px] flex-col items-center rounded-md p-1 text-sm transition-colors hover:bg-accent ${
-                today !== null && isSameDay(day, today) ? "ring-2 ring-primary" : ""
-              } ${!isSameMonth(day, currentMonth) ? "opacity-30" : ""}`}
+      {/* Calendar */}
+      <div>
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 border-l border-t">
+          {WEEKDAYS.map((d, i) => (
+            <div
+              key={d}
+              className={`border-b border-r py-2 text-center text-sm font-medium ${
+                i === 5 ? "text-blue-500" : i === 6 ? "text-red-500" : "text-foreground"
+              }`}
             >
-              <span
-                className={`font-medium ${
-                  dayOfWeek === 0
-                    ? "text-red-500"
-                    : dayOfWeek === 6
-                    ? "text-blue-500"
-                    : ""
-                }`}
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div className="grid grid-cols-7 border-l">
+          {allDays.map((day, idx) => {
+            const isCurrentMonth = isSameMonth(day, currentMonth);
+            const summary = isCurrentMonth ? getDaySummary(day) : null;
+            const colIndex = idx % 7; // 0=Mon … 5=Sat 6=Sun
+            const isSat = colIndex === 5;
+            const isSun = colIndex === 6;
+
+            return (
+              <button
+                key={day.toISOString()}
+                onClick={() => isCurrentMonth && onSelectDate(day)}
+                disabled={!isCurrentMonth}
+                className={`flex min-h-[68px] flex-col items-center border-b border-r pt-2 pb-1 transition-colors ${
+                  isCurrentMonth ? "hover:bg-accent" : ""
+                } ${today !== null && isSameDay(day, today) ? "bg-accent/50" : ""}`}
               >
-                {format(day, "d")}
-              </span>
-              {summary && (
                 <span
-                  className={`mt-1 text-xs font-semibold ${
-                    summary.profit >= 0 ? "text-green-600" : "text-red-500"
+                  className={`text-sm font-medium leading-none ${
+                    !isCurrentMonth
+                      ? "text-muted-foreground/40"
+                      : isSun
+                      ? "text-red-500"
+                      : isSat
+                      ? "text-blue-500"
+                      : ""
                   }`}
                 >
-                  {summary.profit >= 0 ? "+" : ""}
-                  {(summary.profit / 1000).toFixed(0)}k
+                  {format(day, "d")}
                 </span>
-              )}
-            </button>
-          );
-        })}
+                {summary && (
+                  <span
+                    className={`mt-1 text-[11px] font-semibold leading-tight ${
+                      summary.profit >= 0 ? "text-red-500" : "text-blue-500"
+                    }`}
+                  >
+                    {summary.profit >= 0 ? "+" : ""}
+                    {summary.profit.toLocaleString()}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

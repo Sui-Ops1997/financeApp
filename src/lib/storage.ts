@@ -1,6 +1,26 @@
 import { RaceRecord } from "@/types";
 
 const STORAGE_KEY = "keiba_records";
+const MEMO_KEY = "keiba_day_memos";
+
+export function getDayMemo(date: string): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const data = localStorage.getItem(MEMO_KEY);
+    return data ? (JSON.parse(data)[date] ?? "") : "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveDayMemo(date: string, memo: string): void {
+  try {
+    const data = localStorage.getItem(MEMO_KEY);
+    const memos = data ? JSON.parse(data) : {};
+    memos[date] = memo;
+    localStorage.setItem(MEMO_KEY, JSON.stringify(memos));
+  } catch {}
+}
 
 export function getRecords(): RaceRecord[] {
   if (typeof window === "undefined") return [];

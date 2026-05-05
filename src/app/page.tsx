@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+import { Menu, CalendarCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CalendarView } from "@/components/CalendarView";
 import { DayDetailSheet } from "@/components/DayDetailSheet";
@@ -32,51 +33,62 @@ export default function Home() {
     : [];
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6">
-      <h1 className="mb-6 text-xl font-bold">🏇 競馬収支</h1>
-      <CalendarView onSelectDate={handleSelectDate} records={records} />
+    <main className="mx-auto max-w-md">
+      {/* Header */}
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-card px-4 py-3">
+        <button className="rounded-lg p-1.5 hover:bg-accent transition-colors">
+          <Menu className="h-5 w-5" />
+        </button>
+        <h1 className="text-base font-bold">収支カレンダー</h1>
+        <button className="rounded-lg p-1.5 hover:bg-accent transition-colors">
+          <CalendarCheck className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="px-4 py-6">
+        <CalendarView onSelectDate={handleSelectDate} records={records} />
+      </div>
 
       <Dialog
         open={dialogMode !== null}
-        onOpenChange={(open) => {
-          if (!open) setDialogMode(null);
-        }}
+        onOpenChange={(open) => { if (!open) setDialogMode(null); }}
       >
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {dialogMode === "manual" && "手動記録"}
-              {dialogMode === "auto" && "レースから記録"}
-              {dialogMode === "detail" && selectedDate
-                ? format(selectedDate, "M月d日")
-                : ""}
-            </DialogTitle>
-          </DialogHeader>
-
+        <DialogContent showCloseButton={false} className="max-w-md max-h-[85vh] overflow-y-auto p-0">
           {dialogMode === "detail" && selectedDate && (
             <DayDetailSheet
               date={selectedDate}
               records={dayRecords}
               onDelete={removeRecord}
+              onUpdate={addRecord}
               onAddManual={() => setDialogMode("manual")}
               onAddAuto={() => setDialogMode("auto")}
+              onClose={() => setDialogMode(null)}
             />
           )}
 
           {dialogMode === "manual" && selectedDate && (
-            <ManualRecordForm
-              date={selectedDate}
-              onSave={handleSave}
-              onCancel={() => setDialogMode("detail")}
-            />
+            <>
+              <DialogHeader className="px-4 pt-4">
+                <DialogTitle>手動記録</DialogTitle>
+              </DialogHeader>
+              <div className="px-4 pb-4">
+                <ManualRecordForm
+                  date={selectedDate}
+                  onSave={handleSave}
+                  onCancel={() => setDialogMode("detail")}
+                />
+              </div>
+            </>
           )}
 
           {dialogMode === "auto" && selectedDate && (
-            <AutoRecordForm
-              date={selectedDate}
-              onSave={handleSave}
-              onCancel={() => setDialogMode("detail")}
-            />
+            <div className="px-4 pb-4 pt-2">
+              <AutoRecordForm
+                date={selectedDate}
+                onSave={handleSave}
+                onCancel={() => setDialogMode("detail")}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>
