@@ -86,7 +86,7 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
   })();
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Month navigation */}
       <div className="relative flex items-center justify-between px-2 py-2">
         <Button
@@ -145,58 +145,56 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
       </div>
 
       {/* Summary card */}
-      <div className="rounded-xl border bg-card shadow-sm">
+      <div className="rounded-xl border bg-card">
         <div className="flex items-stretch">
-          <div className="flex-1 px-4 py-3">
+          <div className="flex-1 px-3 py-2.5">
             <p className="text-xs text-muted-foreground">収支</p>
-            <p className="text-2xl font-bold text-red-500">
+            <p className={`font-mono text-2xl font-bold ${monthSummary.profit >= 0 ? "text-[#C62828]" : "text-[#1565C0]"}`}>
               {monthSummary.profit >= 0 ? "+" : ""}
               {monthSummary.profit.toLocaleString()}円
             </p>
           </div>
           <div className="w-px bg-border" />
-          <div className="w-24 px-3 py-3 text-center">
+          <div className="w-20 px-2.5 py-2.5 text-center">
             <p className="text-xs text-muted-foreground">回収率</p>
-            <p className={`text-xl font-bold ${monthSummary.recoveryRate >= 100 ? "text-green-600" : "text-blue-500"}`}>
+            <p className={`font-mono text-xl font-bold ${monthSummary.recoveryRate >= 100 ? "text-[#2E7D32]" : "text-[#1565C0]"}`}>
               {monthSummary.recoveryRate}%
             </p>
           </div>
           <div className="w-px bg-border" />
-          <div className="px-4 py-3 text-sm">
-            <div className="flex justify-between gap-3">
+          <div className="px-3 py-2.5 text-sm">
+            <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">購入</span>
-              <span className="font-medium">{monthSummary.investment.toLocaleString()}円</span>
+              <span className="font-mono font-medium">{monthSummary.investment.toLocaleString()}円</span>
             </div>
-            <div className="flex justify-between gap-3 mt-1">
+            <div className="flex justify-between gap-2 mt-1">
               <span className="text-muted-foreground">払戻</span>
-              <span className="font-medium">{monthSummary.payout.toLocaleString()}円</span>
+              <span className="font-mono font-medium">{monthSummary.payout.toLocaleString()}円</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Calendar */}
-      <div>
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 border-l border-t">
+      {/* Calendar: gap-px trick — gap filled with #D0D0D0 creates grid lines */}
+      <div className="overflow-hidden border border-[#D0D0D0]">
+        <div className="grid grid-cols-7 gap-px bg-[#D0D0D0]">
+          {/* Weekday headers */}
           {WEEKDAYS.map((d, i) => (
             <div
               key={d}
-              className={`border-b border-r py-2 text-center text-sm font-medium ${
-                i === 5 ? "text-blue-500" : i === 6 ? "text-red-500" : "text-foreground"
+              className={`bg-background py-1.5 text-center text-sm font-medium ${
+                i === 5 ? "text-[#1565C0]" : i === 6 ? "text-[#C62828]" : "text-foreground"
               }`}
             >
               {d}
             </div>
           ))}
-        </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-7 border-l">
+          {/* Calendar cells */}
           {allDays.map((day, idx) => {
             const isCurrentMonth = isSameMonth(day, currentMonth);
             const summary = isCurrentMonth ? getDaySummary(day) : null;
-            const colIndex = idx % 7; // 0=Mon … 5=Sat 6=Sun
+            const colIndex = idx % 7;
             const isSat = colIndex === 5;
             const isSun = colIndex === 6;
 
@@ -205,18 +203,18 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
                 key={day.toISOString()}
                 onClick={() => isCurrentMonth && onSelectDate(day)}
                 disabled={!isCurrentMonth}
-                className={`flex min-h-[68px] flex-col items-center border-b border-r pt-2 pb-1 transition-colors ${
-                  isCurrentMonth ? "hover:bg-accent" : ""
-                } ${today !== null && isSameDay(day, today) ? "bg-accent/50" : ""}`}
+                className={`flex min-h-[62px] flex-col items-start px-1.5 pt-1.5 pb-1 transition-colors ${
+                  isCurrentMonth ? "bg-background hover:bg-accent" : "bg-background"
+                } ${today !== null && isSameDay(day, today) ? "!bg-accent/60" : ""}`}
               >
                 <span
                   className={`text-sm font-medium leading-none ${
                     !isCurrentMonth
                       ? "text-muted-foreground/40"
                       : isSun
-                      ? "text-red-500"
+                      ? "text-[#C62828]"
                       : isSat
-                      ? "text-blue-500"
+                      ? "text-[#1565C0]"
                       : ""
                   }`}
                 >
@@ -224,8 +222,8 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
                 </span>
                 {summary && (
                   <span
-                    className={`mt-1 text-[11px] font-semibold leading-tight ${
-                      summary.profit >= 0 ? "text-red-500" : "text-blue-500"
+                    className={`mt-1 font-mono text-[11px] font-semibold leading-tight ${
+                      summary.profit >= 0 ? "text-[#C62828]" : "text-[#1565C0]"
                     }`}
                   >
                     {summary.profit >= 0 ? "+" : ""}

@@ -45,7 +45,7 @@ export default function Home() {
         </button>
       </div>
 
-      <div className="px-4 py-6">
+      <div className="px-3 py-3">
         <CalendarView onSelectDate={handleSelectDate} records={records} />
       </div>
 
