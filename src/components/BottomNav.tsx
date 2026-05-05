@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, BarChart2 } from "lucide-react";
+import { CalendarDays, BarChart2, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "カレンダー", icon: CalendarDays },
   { href: "/charts", label: "チャート", icon: BarChart2 },
+  { href: "/settings", label: "設定", icon: Settings },
 ];
 
 export function BottomNav() {

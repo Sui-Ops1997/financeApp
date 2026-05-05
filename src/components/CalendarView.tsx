@@ -11,6 +11,10 @@ import {
   addMonths,
   subMonths,
   getDay,
+  setMonth,
+  setYear,
+  getMonth,
+  getYear,
 } from "date-fns";
 import { ja } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -28,10 +32,22 @@ const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [today, setToday] = useState<Date | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerYear, setPickerYear] = useState(getYear(new Date()));
 
   useEffect(() => {
     setToday(new Date());
   }, []);
+
+  const openPicker = () => {
+    setPickerYear(getYear(currentMonth));
+    setShowPicker(true);
+  };
+
+  const selectMonth = (month: number) => {
+    setCurrentMonth(setMonth(setYear(currentMonth, pickerYear), month));
+    setShowPicker(false);
+  };
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -60,7 +76,7 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
   return (
     <div className="space-y-4">
       {/* Month navigation */}
-      <div className="flex items-center justify-between">
+      <div className="relative flex items-center justify-between">
         <Button
           variant="ghost"
           size="icon"
@@ -68,9 +84,12 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-lg font-semibold">
+        <button
+          onClick={openPicker}
+          className="rounded-md px-3 py-1 text-lg font-semibold hover:bg-accent transition-colors"
+        >
           {format(currentMonth, "yyyy年M月", { locale: ja })}
-        </h2>
+        </button>
         <Button
           variant="ghost"
           size="icon"
@@ -78,6 +97,51 @@ export function CalendarView({ onSelectDate, records }: CalendarViewProps) {
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
+
+        {/* Year/Month picker */}
+        {showPicker && (
+          <>
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setShowPicker(false)}
+            />
+            <div className="absolute left-1/2 top-full z-20 mt-1 w-64 -translate-x-1/2 rounded-xl border bg-card shadow-lg">
+              {/* Year selector */}
+              <div className="flex items-center justify-between border-b px-4 py-2">
+                <button
+                  onClick={() => setPickerYear((y) => y - 1)}
+                  className="rounded p-1 hover:bg-accent"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="font-semibold">{pickerYear}年</span>
+                <button
+                  onClick={() => setPickerYear((y) => y + 1)}
+                  className="rounded p-1 hover:bg-accent"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              {/* Month grid */}
+              <div className="grid grid-cols-4 gap-1 p-3">
+                {Array.from({ length: 12 }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => selectMonth(i)}
+                    className={`rounded-lg py-2 text-sm font-medium transition-colors hover:bg-accent ${
+                      pickerYear === getYear(currentMonth) &&
+                      i === getMonth(currentMonth)
+                        ? "bg-primary text-primary-foreground hover:bg-primary"
+                        : ""
+                    }`}
+                  >
+                    {i + 1}月
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Monthly summary */}
